@@ -9,22 +9,39 @@ export const NFTProvider = ({ children }) => {
   const [currentAccount, setCurrentAccount] = useState("");
 
   const getEthereumContract = () => {
+    if (!window.ethereum) throw new Error("MetaMask not installed");
+    
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
+  
+    if (!currentAccount) throw new Error("No connected wallet account");
+  
     return new ethers.Contract(MarketAddress, MarketAddressABI, signer);
   };
+  
 
   const checkWallet = async () => {
     if (!window.ethereum) return toast.error("Install MetaMask");
     const accounts = await window.ethereum.request({ method: "eth_accounts" });
-    if (accounts.length) setCurrentAccount(accounts[0]);
+    if (accounts.length) {
+      setCurrentAccount(accounts[0]);
+    }
   };
 
   const connectWallet = async () => {
     if (!window.ethereum) return toast.error("Install MetaMask");
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    setCurrentAccount(accounts[0]);
+  
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+  
+    if (accounts.length) {
+      setCurrentAccount(accounts[0]);
+    } else {
+      toast.error("No Ethereum account found");
+    }
   };
+  
 
   const disconnectWallet = () => {
     setCurrentAccount("");
