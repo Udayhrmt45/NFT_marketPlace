@@ -100,7 +100,7 @@ export default function MyNFTsPage() {
       </div>
 
       {visibleNfts.length === 0 ? (
-        <p className="text-gray-600">You don't own any NFTs (or none match the selected filter).</p>
+        <p className="text-gray-600">You do not own any NFTs (or none match the selected filter).</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {visibleNfts.map((nft, i) => (

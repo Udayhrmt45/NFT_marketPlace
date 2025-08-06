@@ -36,7 +36,7 @@ export default function MarketplacePage() {
     };
 
     loadNFTs();
-  }, [currentAccount]);
+  }, [currentAccount, fetchMarket]);
 
   const handleBuy = async (nft) => {
     const loading = toast.loading("Processing purchase...");

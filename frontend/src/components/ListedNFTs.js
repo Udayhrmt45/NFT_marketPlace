@@ -49,7 +49,7 @@ export default function ListedNFTs() {
       }
     };
     loadNFTs();
-  }, []);
+  }, [fetchListedNFTs]);
 
   if (loading) return <p className="p-8">Loading your listed NFTs...</p>;
 
