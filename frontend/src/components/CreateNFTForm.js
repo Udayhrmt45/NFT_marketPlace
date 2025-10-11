@@ -3,6 +3,7 @@ import { useNFT } from "../context/NFTContext";
 import { uploadToIPFS, uploadMetadataToIPFS } from "../utils/pinata.js";
 import { addWatermark } from "../utils/watermark.js";
 import toast from "react-hot-toast";
+import { computeFileHash } from "@/utils/hash";
 
 export default function CreateNFTForm() {
   const [file, setFile] = useState(null);
@@ -42,46 +43,62 @@ export default function CreateNFTForm() {
   };
 
   const handleSubmit = async () => {
-    const loading = toast.loading("Uploading and minting NFT...");
+    if (!file) return toast.error("Please upload a file");
 
-    try {
-      if (!file || !form.name || !form.description || !form.price) {
-        toast.error("All fields are required.", { id: loading });
-        return;
-      }
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      const watermarkText = `© ${accounts[0].slice(0, 6)}...`;
-      const watermarkedFile = await addWatermark(file, watermarkText);
-      const fileURL = await uploadToIPFS(watermarkedFile);
+    // 🔹 Call duplicate-check API
+    const response = await fetch("/api/check-duplicate", {
+      method: "POST",
+      body: formData,
+    });
 
-      const metadataURL = await uploadMetadataToIPFS({
-        name: form.name,
-        description: form.description,
-        file: fileURL,
-        type: file.type.startsWith("video")
-          ? "video"
-          : file.type.startsWith("audio")
-          ? "audio"
-          : "image",
-      });
+    const result = await response.json();
 
-      await createSale(metadataURL, form.price);
-      toast.success("NFT Minted Successfully!", { id: loading });
-    } catch (error) {
-      console.error(error);
-      toast.error("Minting failed.", { id: loading });
+    if (!response.ok) {
+      toast.error(result.error || "Duplicate detected");
+      return;
     }
+
+    const fileHash = result.sha256;
+
+    // 🔹 Continue minting
+    const { ipfsUrl, gatewayUrl, mimeType } = await uploadToIPFS(file);
+
+    const metadataURL = await uploadMetadataToIPFS({
+      name: form.name,
+      description: form.description,
+      image: ipfsUrl, // Use IPFS URL
+      mimeType, // Pass detected file type
+    });
+
+    await createSale(metadataURL, form.price, fileHash);
+    toast.success("NFT Minted Successfully!");
   };
 
   const renderPreview = () => {
     if (!previewUrl || !file) return null;
     if (file.type.startsWith("image")) {
-      return <img src={previewUrl} alt="Preview" className="max-w-full h-48 object-contain mb-4" />;
+      return (
+        <img
+          src={previewUrl}
+          alt="Preview"
+          className="max-w-full h-48 object-contain mb-4"
+        />
+      );
     } else if (file.type.startsWith("audio")) {
-      return <audio controls className="w-full mb-4"><source src={previewUrl} /></audio>;
+      return (
+        <audio controls className="w-full mb-4">
+          <source src={previewUrl} />
+        </audio>
+      );
     } else if (file.type.startsWith("video")) {
-      return <video controls className="w-full h-48 mb-4"><source src={previewUrl} /></video>;
+      return (
+        <video controls className="w-full h-48 mb-4">
+          <source src={previewUrl} />
+        </video>
+      );
     } else {
       return <p className="text-sm mb-4">{file.name}</p>;
     }
@@ -91,7 +108,9 @@ export default function CreateNFTForm() {
     <div className="max-w-xl mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
       <h2 className="text-2xl font-bold mb-4">Create New NFT</h2>
 
-      <label className="block mb-2 font-medium">Upload File (image/audio/video):</label>
+      <label className="block mb-2 font-medium">
+        Upload File (image/audio/video):
+      </label>
 
       <div
         onDragOver={handleDragOver}
@@ -102,7 +121,9 @@ export default function CreateNFTForm() {
         }`}
       >
         <p className="text-center text-gray-600">
-          {file ? "File Selected" : "Drag & drop a file here or click to browse"}
+          {file
+            ? "File Selected"
+            : "Drag & drop a file here or click to browse"}
         </p>
         <input
           type="file"

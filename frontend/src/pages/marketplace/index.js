@@ -3,6 +3,7 @@ import { useNFT } from "../../context/NFTContext.js";
 import NFTMedia from "../../components/NFTMedia.js";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { resolveIPFS, getMediaType } from "../../utils/ipfs";
 
 export default function MarketplacePage() {
   const { currentAccount, fetchMarket, buyNFT } = useNFT();
@@ -10,28 +11,40 @@ export default function MarketplacePage() {
   const [mediaFilter, setMediaFilter] = useState("all");
 
   useEffect(() => {
-    if (!currentAccount) return; // Wait for wallet connection
+    if (!currentAccount) return;
 
     const loadNFTs = async () => {
       try {
         const items = await fetchMarket();
         const metadata = await Promise.all(
           items.map(async (item) => {
-            const res = await axios.get(item.tokenURI);
+            const tokenURI = resolveIPFS(item.tokenURI);
+            let resData = {};
+            try {
+              const res = await axios.get(tokenURI);
+              resData = res.data;
+            } catch (err) {
+              console.warn("Failed to fetch metadata:", tokenURI, err.message);
+            }
+
+            const fileURL = resolveIPFS(resData.file || resData.image);
+            const type = getMediaType(resData.properties?.contentType);
+
             return {
               ...item,
-              image: res.data.image,
-              name: res.data.name,
-              description: res.data.description,
-              preview: res.data.preview,
-              file: res.data.file,
-              type: res.data.type,
+              file: fileURL,
+              image: fileURL,
+              preview: fileURL,
+              name: resData.name || "",
+              description: resData.description || "",
+              type,
             };
           })
         );
         setNfts(metadata);
       } catch (err) {
         console.error("Failed to load NFTs", err);
+        toast.error("Failed to load NFTs");
       }
     };
 
@@ -51,9 +64,8 @@ export default function MarketplacePage() {
   return (
     <div className="p-8">
       <h2 className="text-3xl font-bold mb-6">Marketplace</h2>
-      {!currentAccount && (
-        <p className="text-red-500 mb-4">Connect your wallet to view NFTs</p>
-      )}
+      {!currentAccount && <p className="text-red-500 mb-4">Connect your wallet to view NFTs</p>}
+
       <div className="mb-6">
         <label className="mr-2 font-semibold">Filter by media type:</label>
         <select

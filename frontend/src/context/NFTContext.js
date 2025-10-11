@@ -1,3 +1,4 @@
+// components/NFTContext.js
 import { createContext, useContext, useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { MarketAddress, MarketAddressABI } from "../constants.js";
@@ -48,12 +49,12 @@ export const NFTProvider = ({ children }) => {
     toast("Wallet disconnected");
   };
 
-  const createSale = async (tokenURI, price) => {
+  const createSale = async (tokenURI, price, fileHash) => {
     try {
       const contract = getEthereumContract();
       const listingPrice = await contract.getListingPrice();
       const priceInEth = ethers.utils.parseEther(price.toString());
-      const tx = await contract.createToken(tokenURI, priceInEth, {
+      const tx = await contract.createToken(tokenURI, priceInEth, fileHash, {
         value: listingPrice.toString(),
       });
       await tx.wait();

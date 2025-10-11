@@ -3,6 +3,7 @@ import { useNFT } from "../context/NFTContext.js";
 import NFTMedia from "./NFTMedia.js";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { resolveIPFS, getMediaType } from "../utils/ipfs";
 
 export default function MyNFTsPage() {
   const { currentAccount, fetchMyNFTs, resellNFT } = useNFT();
@@ -22,30 +23,27 @@ export default function MyNFTsPage() {
       setLoading(true);
       try {
         const items = await fetchMyNFTs();
-
         const metadata = await Promise.all(
           items.map(async (item) => {
-            let tokenURI = item.tokenURI;
+            const tokenURI = resolveIPFS(item.tokenURI);
             let resData = {};
-
             try {
               const res = await axios.get(tokenURI);
-              resData = res.data || {};
+              resData = res.data;
             } catch (err) {
-              console.warn("Failed to fetch metadata for tokenURI:", tokenURI, err?.message || err);
+              console.warn("Failed to fetch metadata:", tokenURI, err.message);
             }
 
+            const fileURL = resolveIPFS(resData.file || resData.image);
+            const type = getMediaType(resData.properties?.contentType);
+
             return {
-              tokenId: item.tokenId,
-              price: item.price,
-              seller: item.seller,
-              owner: item.owner,
-              tokenURI,
+              ...item,
+              file: fileURL,
+              preview: fileURL,
               name: resData.name || "",
               description: resData.description || "",
-              file: resData.file || resData.image || "",
-              preview: resData.preview || resData.image || "",
-              type: resData.type || (resData.image ? "image" : ""),
+              type,
             };
           })
         );
@@ -77,14 +75,11 @@ export default function MyNFTsPage() {
 
   if (loading) return <p className="p-8">Loading your NFTs...</p>;
 
-  // By design fetchMyNFTs returns only NFTs owned by currentAccount,
-  // so we don't need to filter out owners. We do provide media type filter.
   const visibleNfts = nfts.filter((nft) => mediaFilter === "all" || nft.type === mediaFilter);
 
   return (
     <div className="p-8">
       <h2 className="text-3xl font-bold mb-6">My NFTs</h2>
-
       <div className="mb-6">
         <label className="mr-2">Filter by Media Type:</label>
         <select
@@ -100,7 +95,7 @@ export default function MyNFTsPage() {
       </div>
 
       {visibleNfts.length === 0 ? (
-        <p className="text-gray-600">You do not own any NFTs (or none match the selected filter).</p>
+        <p className="text-gray-600">No NFTs found for the selected filter.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {visibleNfts.map((nft, i) => (
@@ -129,4 +124,3 @@ export default function MyNFTsPage() {
     </div>
   );
 }
-

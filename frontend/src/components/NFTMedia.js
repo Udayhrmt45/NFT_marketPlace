@@ -1,4 +1,3 @@
-// NFTMedia.js
 export default function NFTMedia({ src, type }) {
   switch (type) {
     case "image":
