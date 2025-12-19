@@ -31,7 +31,7 @@ export default function MyNFTsPage() {
               const res = await axios.get(tokenURI);
               resData = res.data;
             } catch (err) {
-              console.warn("Failed to fetch metadata:", tokenURI, err.message);
+              console.warn("Failed to fetch metadata:", tokenURI);
             }
 
             const fileURL = resolveIPFS(resData.file || resData.image);
@@ -73,54 +73,101 @@ export default function MyNFTsPage() {
     }
   };
 
-  if (loading) return <p className="p-8">Loading your NFTs...</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0b0f14] text-gray-400 flex items-center justify-center">
+        Loading your NFTs...
+      </div>
+    );
+  }
 
-  const visibleNfts = nfts.filter((nft) => mediaFilter === "all" || nft.type === mediaFilter);
+  const visibleNfts = nfts.filter(
+    (nft) => mediaFilter === "all" || nft.type === mediaFilter
+  );
 
   return (
-    <div className="p-8">
-      <h2 className="text-3xl font-bold mb-6">My NFTs</h2>
-      <div className="mb-6">
-        <label className="mr-2">Filter by Media Type:</label>
-        <select
-          value={mediaFilter}
-          onChange={(e) => setMediaFilter(e.target.value)}
-          className="p-2 border rounded"
-        >
-          <option value="all">All</option>
-          <option value="image">Images</option>
-          <option value="video">Videos</option>
-          <option value="audio">Audio</option>
-        </select>
-      </div>
+    <div className="min-h-screen bg-[#0b0f14] text-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 py-10">
 
-      {visibleNfts.length === 0 ? (
-        <p className="text-gray-600">No NFTs found for the selected filter.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {visibleNfts.map((nft, i) => (
-            <div key={i} className="border p-4 rounded-xl shadow-md">
-              <NFTMedia src={nft.file} type={nft.type} />
-              <h3 className="text-lg font-semibold">{nft.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{nft.description}</p>
-              <p className="mb-2 font-bold">Price: {nft.price} ETH</p>
-
-              <input
-                placeholder="Resale Price in ETH"
-                type="number"
-                className="block w-full mb-2 p-2 border rounded"
-                onChange={(e) => setPrice({ ...price, [nft.tokenId]: e.target.value })}
-              />
-              <button
-                onClick={() => handleResell(nft.tokenId)}
-                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-              >
-                Resell
-              </button>
-            </div>
-          ))}
+        {/* Header */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-semibold text-white mb-1">
+            My NFTs
+          </h2>
+          <p className="text-gray-400">
+            NFTs owned by your wallet
+          </p>
         </div>
-      )}
+
+        {/* Filter */}
+        <div className="flex items-center gap-4 mb-10">
+          <span className="text-sm text-gray-400">Filter</span>
+          <select
+            value={mediaFilter}
+            onChange={(e) => setMediaFilter(e.target.value)}
+            className="bg-[#151b22] border border-gray-700 text-sm px-4 py-2 rounded-xl outline-none focus:border-blue-500"
+          >
+            <option value="all">All</option>
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+            <option value="audio">Audio</option>
+          </select>
+        </div>
+
+        {/* NFT Grid */}
+        {visibleNfts.length === 0 ? (
+          <div className="text-center text-gray-400 mt-20">
+            <p className="text-lg">No NFTs found</p>
+            <p className="text-sm">
+              Mint or purchase NFTs to see them here
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {visibleNfts.map((nft, i) => (
+              <div
+                key={i}
+                className="bg-[#111827] border border-gray-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition"
+              >
+                {/* Media */}
+                <div className="bg-black">
+                  <NFTMedia src={nft.file} type={nft.type} />
+                </div>
+
+                {/* Card Content */}
+                <div className="p-4">
+                  <h3 className="text-white font-semibold truncate">
+                    {nft.name}
+                  </h3>
+                  <p className="text-gray-400 text-sm line-clamp-2 mb-3">
+                    {nft.description}
+                  </p>
+
+                  <p className="text-sm font-semibold mb-3">
+                    {nft.price} ETH
+                  </p>
+
+                  <input
+                    placeholder="Resale price (ETH)"
+                    type="number"
+                    className="w-full mb-3 px-3 py-2 text-sm bg-[#0b0f14] border border-gray-700 rounded-xl outline-none focus:border-blue-500"
+                    onChange={(e) =>
+                      setPrice({ ...price, [nft.tokenId]: e.target.value })
+                    }
+                  />
+
+                  <button
+                    onClick={() => handleResell(nft.tokenId)}
+                    className="w-full px-4 py-2 text-sm rounded-xl bg-purple-600 hover:bg-purple-700 transition"
+                  >
+                    Resell NFT
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
